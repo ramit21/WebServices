@@ -1,0 +1,8 @@
+
+Using ResponseEntity, one can send specific error codes in response header
+Jpa and Pagination
+Jpa criteria queries
+Loading multiple property files
+Rest api exception handlers
+Set and reset cookies
+Calling Restful Apis using RestTemplate.exchange

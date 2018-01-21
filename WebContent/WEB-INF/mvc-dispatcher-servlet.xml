@@ -1,0 +1,125 @@
+<beans xmlns="http://www.springframework.org/schema/beans"
+	xmlns:context="http://www.springframework.org/schema/context"
+	xmlns:mvc="http://www.springframework.org/schema/mvc" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xmlns:tx="http://www.springframework.org/schema/tx" xmlns:task="http://www.springframework.org/schema/task"
+	xsi:schemaLocation="
+        http://www.springframework.org/schema/beans     
+        http://www.springframework.org/schema/beans/spring-beans-3.0.xsd
+        http://www.springframework.org/schema/context 
+        http://www.springframework.org/schema/context/spring-context-3.0.xsd
+        http://www.springframework.org/schema/mvc
+        http://www.springframework.org/schema/mvc/spring-mvc-3.0.xsd
+        http://www.springframework.org/schema/task
+<!-- http://www.springframework.org/schema/task/spring-task-4.2.xsd -->">
+
+	<context:component-scan base-package="com.ramit.controller" />
+	<context:component-scan base-package="com.ramit.service" />
+
+	<!-- Task Scheduler -->
+	<task:scheduler id="taskScheduler" />
+	<task:scheduled-tasks scheduler="taskScheduler">
+		<task:scheduled ref="myScheduler" method="reportCurrentTime"
+			fixed-delay="5000" />
+	</task:scheduled-tasks>
+
+
+	<mvc:annotation-driven />
+
+	<!-- Swagger -->
+	<mvc:resources mapping="/swagger/**" location="/WEB-INF/" />
+	<bean class="com.mangofactory.swagger.configuration.DocumentationConfig" />
+	<context:property-placeholder location="/WEB-INF/swagger.properties"
+		order="1" ignore-unresolvable="true" />
+
+	<!-- Property file, first loading for use in xml, then a bean for java code -->
+	<context:property-placeholder location="/WEB-INF/config.properties"
+		order="2" ignore-unresolvable="true" />
+	<bean id="placeholderConfigMM" class="com.ramit.util.SpringPropertiesUtil">
+		<property name="systemPropertiesModeName" value="SYSTEM_PROPERTIES_MODE_OVERRIDE" />
+		<property name="location" value="/WEB-INF/config.properties" />
+	</bean>
+
+	<!-- ************ JPA configuration *********** -->
+	<bean id="myEmf"
+		class="org.springframework.orm.jpa.LocalContainerEntityManagerFactoryBean">
+		<property name="dataSource" ref="dataSource" />
+		<property name="packagesToScan" value="com.ramit.persistence.model" />
+		<property name="jpaVendorAdapter">
+			<bean class="org.springframework.orm.jpa.vendor.HibernateJpaVendorAdapter" />
+		</property>
+		<property name="jpaProperties">
+			<props>
+				<prop key="hibernate.dialect">org.hibernate.dialect.Oracle10gDialect</prop>
+				<prop key="hibernate.show_sql">true</prop>
+			</props>
+		</property>
+	</bean>
+
+	<bean id="dataSource"
+		class="org.springframework.jdbc.datasource.DriverManagerDataSource">
+		<property name="driverClassName" value="oracle.jdbc.OracleDriver" />
+		<property name="url" value="jdbc:oracle:thin:@localhost:1521:xe" />
+		<property name="username" value="${db.user}" />
+		<property name="password" value="${db.password}" />
+	</bean>
+
+	<bean id="transactionManager" class="org.springframework.orm.jpa.JpaTransactionManager">
+		<property name="entityManagerFactory" ref="myEmf" />
+	</bean>
+
+	<bean id="jobDao" class="com.ramit.dao.impl.JobDaoImpl"></bean>
+
+	<!-- ContentNegotiatingViewResolver to display same resource in different 
+		formats -->
+	<bean
+		class="org.springframework.web.servlet.view.ContentNegotiatingViewResolver">
+		<property name="order" value="1" />
+		<property name="mediaTypes">
+			<map>
+				<entry key="json" value="application/json" />
+				<entry key="xml" value="application/xml" />
+			</map>
+		</property>
+
+		<property name="defaultViews">
+			<list>
+				<!-- JSON View -->
+				<bean
+					class="org.springframework.web.servlet.view.json.MappingJacksonJsonView">
+				</bean>
+
+				<!-- JAXB XML View -->
+				<bean class="org.springframework.web.servlet.view.xml.MarshallingView">
+					<constructor-arg>
+						<bean class="org.springframework.oxm.jaxb.Jaxb2Marshaller">
+							<property name="classesToBeBound">
+								<list>
+									<value>com.ramit.domain.Coffee</value>  <!--classes mentioned here will be returned as XML, rest as JSON -->
+								</list>
+							</property>
+						</bean>
+					</constructor-arg>
+				</bean>
+			</list>
+		</property>
+		<property name="ignoreAcceptHeader" value="true" />
+
+	</bean>
+
+	<!-- If no extension matched, use JSP view -->
+	<bean
+		class="org.springframework.web.servlet.view.InternalResourceViewResolver">
+		<property name="order" value="2" />
+		<property name="prefix">
+			<value>/WEB-INF/pages/</value>
+		</property>
+		<property name="suffix">
+			<value>.jsp</value>
+		</property>
+	</bean>
+
+
+</beans>
+
+
+
